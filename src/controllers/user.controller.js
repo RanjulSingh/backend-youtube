@@ -3,6 +3,9 @@ import {ApiError} from "../utils/ApiError.js"
 import {User}  from  "../models/user.model.js"
 import {uploadOnCloudinary} from "../utils/cloudinary.js"
 import  { ApiResponse}  from "../utils/apiResponse.js"
+//import jwt from "jsonwebtoken"
+import mongoose from "mongoose"
+
 const registerUser = asyncHandler(async (req, res)=>{
    //get user details from frontend
    //validation - not empty
@@ -14,7 +17,7 @@ const registerUser = asyncHandler(async (req, res)=>{
    //check for user creation 
    //return response
 
-   const {fullName,email,password}=req.body
+   const {fullName, email, username,password}=req.body
    console.log("email: ", email);
 
 //    if(fullName=="")
@@ -30,9 +33,11 @@ if(
 
 }
 
-const existedUser = User.findOne({
+const existedUser = await User.findOne({
     $or: [{ username }, { email }]
 })
+console.log('existeduser', existedUser)
+
 
 if(existedUser){
     throw new ApiError(409, "user with email already exists")
@@ -42,6 +47,10 @@ if(existedUser){
 const avatarLocalPath = req.files?.avatar[0]?.path;
 const coverImageLocalPath = req.files?.coverImage[0]?.path;
 
+// let coverImageLocalPath;
+// if(req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length>0){
+// coverImageLocalPath =  req.files.coverImage[0].path;
+// }//this is classic way of checking
 
 if(!avatarLocalPath)
 {
@@ -57,16 +66,20 @@ if(!avatar)
 }
 
 
+
 const user = await User.create({
     fullName,
     avatar: avatar.url,
-    coverImage: coverImage.url?.url || "",
+    coverImage: coverImage?.url || "",
     email,
     password,
-    username: username.toLowerCase()
+    username: username ? username.toLowerCase() : "",
 })
 
-const createdUser = await user.findById(user._id).select(
+
+
+
+const createdUser = await User.findById(user._id).select(
     "-password -refreshToken"
 )
 

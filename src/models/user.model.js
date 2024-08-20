@@ -1,5 +1,5 @@
 import mongoose, {Schema} from "mongoose"
-import jwt from "jsontoken"
+import jwt from "jsonwebtoken"// i have imported jsonwebtoken and installed also
 import bcrypt from "bcrypt"
 
 
@@ -23,7 +23,7 @@ const userSchema= new Schema(
             trim: true,
             
         },
-        fullname:{
+        fullName:{
             type: String,
             required: true,
             unique: true,
