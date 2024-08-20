@@ -67,7 +67,7 @@ userSchema.pre("save", async function (next) {
 
     return next()
 
-    this.password = bcrypt.hash(this.password, 10) //this line encrypt password
+    this.password = await bcrypt.hash(this.password, 10) //this line encrypt password
     next()
 })  //koi bhi data delete save update karne se kuchh kaam karna ho toh pre hook
 // This line sets up a "pre-save" hook for the user schema.
