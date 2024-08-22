@@ -357,6 +357,137 @@ const updateUserCoverImage = asyncHandler(async(req,res)=>{
 
 
 
+const getUserChannelProfile = asyncHandler(async(req,res)=>{
+    const {username} = req.params//hamien uski profile url se milegi jo ki hai params
+
+    if(!username?.trim()){
+        throw new ApiError(400, "username is missing")
+    }
+
+    const channel = await User.aggregate([//in first pipeline we are finding subscribers
+        {
+            $match:{
+                username: username?.toLowerCase()
+            }
+        },
+            {
+                $lookup:{
+                    from : "subscriptions",
+                    localField: "_id",
+                    foriegnField: "channel",
+                    as : "subscribers"//new field is added  using pipeline that contains subscribers
+                }
+            },
+            {
+                $lookup: {
+                    from : "subscriptions",
+                    localField: "_id",
+                    foriegnField: "subscriber",
+                    as : "subscribedTo"//new field is added
+                }
+            },
+            {
+                $addfields:{
+                    subscribersCount:{
+                        $size: "subscribers"//counts no os subscribers from subscribers field
+                    },
+                    channelsSubscribedToCount:{
+                        $size:"$subscribedTo"
+                    },
+                    isSubscribed:{
+                        $cond: {
+                            if: {$in:[req.user?._id,"$subscribers.subscriber"]}, //ye in check kar raha ki subscribers field mien wo subscriber hai yaa nhi
+                            then: true,
+                            else: false
+                        }
+                    }
+                }
+            },
+            {
+                $project:{//projection hai ki sari values ko nhi but selected cheejien dungi
+                    fullName: 1,
+                    username: 1,
+                    subscribersCount: 1,
+                    channelSubscribedToCount: 1,
+                    avatar: 1,
+                    coverImage: 1,
+                    email: 1,
+                    isSubscribed: 1
+                }
+            }
+        
+    ])
+
+if(!channel?.length){
+throw new ApiError(404, "channel does not exists")
+
+}
+
+return res
+.status(200)
+.json(
+    new ApiResponse(200, "user channel fetched successfully")
+)
+
+})
+
+const getWatchHistory = asyncHandler(async(req,res)=>{
+const user = await User.aggregate([
+    {
+        $match:{
+            _id: new mongoose.Types.ObjectId(req.user._id)
+        }
+    },
+    {
+        $lookup:{
+            from : "videos",
+            localField: "watchHistory",
+            foriegnField: "_id",
+            as: "watchHistory",
+            pipeline:[
+                {
+                $ookup:{
+                    from: "users",
+                    localField: "owner",
+                    foriegnField: "_id",
+                    as : "owner",
+                    pipeline:[
+                        {
+                        $project:{
+                             fullName: 1,
+                             username: 1,
+                             avatar: 1
+                        }
+                    }
+                    ]
+
+                }
+            },
+            {
+                $addFields:{
+                    owner:{
+                        $first: "$owner"
+                    }
+                }
+            }
+        ]
+
+        }
+    }
+])
+
+return res
+.status(200)
+.json(
+    new ApiResponse(
+        200,
+        user[0].watchHistory, //user ki watch history deni hai
+        "watch history fetched successfully"
+    )
+)
+})
+
+
 export {
     registerUser,
     loginUser,
@@ -366,6 +497,8 @@ export {
     getCurrentUser,
     updateAccountDetails,
     updateUserAvatar,
-    updateUserCoverImage
+    updateUserCoverImage,
+    getUserChannelProfile ,
+    getWatchHistory
 
 }
